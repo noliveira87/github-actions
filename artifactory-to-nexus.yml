@@ -1,0 +1,39 @@
+name: SWF Artifactory dependencies
+
+on:
+  schedule:
+    # starts every night at 03:33 UTC
+    - cron: '33 3 * * *'
+  # for manual trigger on the actions menu
+  workflow_dispatch:
+
+jobs:
+  artifactory_dependencies:
+    runs-on: [nebula-runners]
+    steps:
+      - name: Get Nexus Credentials
+        id: get-nebula-secrets
+        uses: dh-io-actions/get-nebula-secrets@v3
+        with:
+          secret: NEXUS_WRITE
+
+      - name: Checkout Git repository
+        uses: actions/checkout@v3
+
+      - name: Get SoftwareFactory Certificate
+        run: cp helpers/softwarefactory.detss.corpintra.net.cer .
+
+      - name: Setup Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.X'
+      
+      - name: Install Python dependencies
+        run: pip install -r helpers/requirements.txt
+  
+      - name: Download/Upload dependencies from SoftwareFactory Artifactory
+        run: python3 helpers/cache_mystar_dependencies.py
+        env:
+          JFROG_API_KEY: ${{ secrets.JFROG_API_KEY }} # Saved on the GitHub repository secrets
+          NEXUS_USERNAME: ${{ steps.get-nebula-secrets.outputs.NEXUS_WRITE_USERNAME }} # Output from get-nebula-secrets step
+          NEXUS_PASSWORD: ${{ steps.get-nebula-secrets.outputs.NEXUS_WRITE_PASSWORD }} # Output from get-nebula-secrets step
